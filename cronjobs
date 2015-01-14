@@ -1,0 +1,7 @@
+# *StartupRanking Database calculations
+NODE_ENV=production 
+# Test
+*/5 * * * * 	root /opt/node/bin/node /opt/startuprankingscript/startuprankingscript/script.js --testdatabase > /dev/null 2>&1
+
+10 0 * * * 	root /opt/node/bin/node /opt/convertcoynonpm/script.js --historic > /dev/null 2>&1
+
