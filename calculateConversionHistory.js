@@ -1,4 +1,6 @@
 var config = require(__dirname+'/config');
+var classCoyn = require(__dirname+'/CoynverterClass');
+console.log(classCoyn.createCoynObject());
 var rank = {
   createdAt: config.moment().valueOf()
 };
@@ -30,5 +32,12 @@ if (fs.existsSync(__dirname+'/logs/')) {
 
 //Visible for script.js
 module.exports = {
-  
+  getConversion: function () {
+    var objectCoyn = classCoyn.createCoynObject();
+    return {
+      calculateBaseAmount: objectCoyn.calculateBaseAmount(),
+      getExchangeRate: objectCoyn.createCoynObject().exchangeRate(),
+      repopulateBtcToFiat: objectCoyn.createCoynObject().repopulateBtcToFiat()
+    };
+  }
 };

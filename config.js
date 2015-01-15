@@ -21,7 +21,6 @@ module.exports = {
   dbMongo: dbMongo,
   _: _,
   moment: moment,
-  parseString: parseString,
   nodemailer: nodemailer,
   smtpTransport: smtpTransport,
   username: config.USERNAME,

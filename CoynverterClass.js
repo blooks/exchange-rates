@@ -1,58 +1,59 @@
-/**
- * Created by levin on 30.10.14.
- */
-/**
- * Providing the methods for exchanging currencies
- */
-function Coynverter () {}
+//15.01.2015 LFG Working under testing purposes//Now heavy development on this file, full of crap, many thinks to improve
+var request = require('request');
+var config = require(__dirname+'/config');
+var _ = require('underscore');
+var log = require('tracer').colorConsole();
 
-Coynverter.prototype.userJurisdiction = function () {
-  var _ref, _ref1;
-  return ((_ref = Meteor.user) !== null ? (_ref1 = _ref.profile) !== null ? _ref1.jurisdiction : void 0 : void 0) !== null ? Meteor.user.profile.jurisdiction:'de';
-};
+function Coynverter (date, fromCurrency, toCurrency) {
+  this.date = date;
+  this.fromCurrency = fromCurrency;
+  this.toCurrency = toCurrency;
+}
 
-Coynverter.prototype.exchangeRate = function (from, to, date) {
+Coynverter.prototype.exchangeRate = function (fromCurrency, toCurrency, date) {
   // TODO: usage scenarios? - decide if it'll throw errors or return nulls
-
   /**
    * @returns {String} User's jurisdiction (the 2-letter id). Default: 'de'
    */
-  
-
+  var userJurisdiction = function () {
+    var _ref, 
+        _ref1;
+    return 'de';
+    //return ((_ref = Meteor.user) !== null ? (_ref1 = _ref.profile) !== null ? _ref1.jurisdiction : void 0 : void 0) !== null ? Meteor.user.profile.jurisdiction:'de';
+  };
   /**
    * @returns {Number} The EUR to USD conversion rate
    */
   var eurToUsd = function () {
-    var jurisdiction, year = date.getFullYear(), month = date.getMonth() + 1;
+    var jurisdiction, 
+        year = new Date(date).getFullYear(), 
+        month = new Date(date).getMonth() + 1;
     jurisdiction = userJurisdiction();
-    return (exchangeRates[jurisdiction] && exchangeRates[jurisdiction]['USD'] &&
-    exchangeRates[jurisdiction]['USD'][year] && exchangeRates[jurisdiction]['USD'][year][month]) ?
-        exchangeRates[jurisdiction]['USD'][year][month] :
-        null;
+    //return (exchangeRates[jurisdiction] && exchangeRates[jurisdiction]['USD'] && exchangeRates[jurisdiction]['USD'][year] && exchangeRates[jurisdiction]['USD'][year][month]) ? exchangeRates[jurisdiction]['USD'][year][month]:null;
+    return 1.12;  
   };
 
   /**
    * @returns {Number} The EUR to USD conversion rate or its inverse
    */
   var btcToFiat = function (currency) {
-    var startDate = date;
-    var endDate = new Date(date.getTime() + 24000 * 3600);
-    var rateRecord = BtcToFiat.findOne({date: {$gte: startDate, $lt: endDate}});
+    var startDate = this.date;
+    log.info(this.date);
+    var endDate = new Date(this.date.getTime() + 24000 * 3600);
+    //var rateRecord = BtcToFiat.findOne({date: {$gte: startDate, $lt: endDate}});
     return (rateRecord && rateRecord[currency]) ? Number(rateRecord[currency]) : null;
   };
-
   // validate and dispatch the exchange request:
   date = date || new Date();
   var acceptedCurrencies = ['USD', 'EUR', 'BTC'];
-  if (acceptedCurrencies.indexOf(from) < 0 || acceptedCurrencies.indexOf(to) < 0) {
-      throw new Error('400', 'Sorry, can\'t use currency \'' + from + '\'.');
+  if (acceptedCurrencies.indexOf(fromCurrency) < 0 || acceptedCurrencies.indexOf(toCurrency) < 0) {
+    throw new Error('400', 'Sorry, can\'t use currency \'' + fromCurrency + '\'.');
   }
-
-  switch (from) {
-    case to:
+  switch (this.fromCurrency) {
+    case this.toCurrency:
       return 1;
     case 'BTC':
-      return to === 'USD' ? btcToFiat('USD') : btcToFiat('EUR');
+      return this.toCurrency === 'USD' ? btcToFiat('USD') : btcToFiat('EUR');
     case 'EUR':
       if (to === 'USD') {
         return eurToUsd();
@@ -62,105 +63,102 @@ Coynverter.prototype.exchangeRate = function (from, to, date) {
       }
       break;
     case 'USD':
-      if (to === 'BTC') {
+      if (this.toCurrency === 'BTC') {
         var b2u = btcToFiat('USD');
         return b2u ? 1 / b2u : null;
-      }
-      else {
+      }else {
         var e2u = eurToUsd();
         return e2u ? 1 / e2u : null;
       }
   }
 };
 
-Coynverter = (function() {
-
-  /**
-   * Get the exchange rate on a certain date
-   * @param {String} from
-   * @param {String} to
-   * @param {Date} date
-   * @returns {Number}
-   */
-  var exchangeRate = function( from, to, date ) {
-
-  };
-
-
-  /**
-   * Note: Base currency is always EUR at the moment
-   * @param {Number} amount
-   * @param {String} from
-   * @param {Date} date
-   * @returns {Number} The corresponding amount in the base currency
-   */
-  var calculateBaseAmount = function(amount, from, date) {
-    var baseCurrency = 'EUR', rate;
-    check( date = date || new Date(), Date );
-    from = from || 'USD';
-    rate = exchangeRate(from, baseCurrency, date);
-    if (!rate) {
-      console.log("Coynverter returning null!");
-      console.log("Converting from:" + from);
-      return 1;
+Coynverter.prototype.importCurrency = function (currency) {
+  var today = config.moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
+  var url = 'https://api.coindesk.com/v1/bpi/historical/close.json?start='+today+'&end='+today+'&currency='+currency;
+  request.get({uri: url}, function (err, response, body) {
+    if(err){
+      log.error(err);
     }
-    return rate ? parseInt(amount * rate) : null;
-  };
+    if(response){
+      //console.log(response);
+    }
+    if(body){
+      var ratesValues = JSON.parse(body);
+      _.map(ratesValues.bpi, function (value, key) {
+        log.info("Value: "+value+" new currency: "+currency+" date: "+key);
+      });
+    }
+  });
+};
+
+/**
+ * [repopulateBtcToFiat look for a the price in a currency for one date]
+ * @param  {[type]} dateStart [description]
+ * @param  {[type]} dateEnd [if this parameter is not provided it will look for just one day give by dateStart parameter]
+ * @param  {[type]} currency    [description]
+ * @return {[type]}             [description]
+ */
+Coynverter.prototype.repopulateBtcToFiat = function (currency, dateStart, dateEnd) {
+  // YYYY-MM-DD format
+  // ?currency=<VALUE> in USD format
+  var endDate = typeof dateEnd !== 'undefined' ? dateEnd : dateStart;
+  var url = 'https://api.coindesk.com/v1/bpi/historical/close.json?start='+dateStart+'&end='+endDate+'&currency='+currency;
+  request.get({uri: url}, function (err, response, body) {
+    if(err){
+      log.error(err);
+    }
+    if(response){
+      //console.log(response);
+    }
+    if(body){
+      var ratesValues = JSON.parse(body);
+      _.map(ratesValues.bpi, function (value, key) {
+        log.info("Value: "+value+" "+currency+" date: "+key);
+      });
+    }
+  });
+};
+
+/**
+ * [calculateBaseAmount description]
+ * @param  {[type]} amount [description]
+ * @return {[type]}        [description]
+ */
+Coynverter.prototype.calculateBaseAmount = function (amount) {
+  var baseCurrency = 'EUR', 
+      rate;
+  this.fromCurrency = this.fromCurrency || 'USD';
+  log.info(this.fromCurrency);
+  rate = this.exchangeRate(this.fromCurrency, baseCurrency, this.date);
+  if (!rate) {
+    log.info("Coynverter returning null!");
+    log.info("Converting fromCurrency:" + this.fromCurrency);
+    return 1;
+  }
+  return rate ? parseInt(amount * rate) : null;
+};
+
+var coynverter = new Coynverter("2015-01-10", "USD", "EUR");
+
+log.info(coynverter.repopulateBtcToFiat("EUR", "2015-01-12"));
+
+log.info(coynverter.calculateBaseAmount("100"));
+
+log.info(coynverter.importCurrency('USD'));
+
+//Coynverter().getValueOfAt(date,currencyfromCurrency,currencyto,cb);
+//var synccoynverter =  Meteor.asyncwrap(Coynverter(.getvalue));
 
 
-  /**
-   * Import rates from csv files
-   * @param {String} currency
-   * @param {String} dbOp Specifically ask to 'insert' or 'update' the records (using 'upsert' would be too slow)
-   */
-  var importCurrency = function(currency, dbOp) {
 
-    var fileLines, dailyData, doc,
-      filenames = {USD: 'data/HistDollarPrices.csv', EUR: 'data/HistEuroPrices.csv'};
-    fileLines = Assets.getText(filenames[currency]).split('\n');
-    fileLines.shift();  // remove the table header
-
-    fileLines.forEach(function(line) {
-      dailyData = line.split(',');
-      if (dbOp === 'insert') {
-        doc = {date: new Date(dailyData[0])};
-        doc[currency] = dailyData[1];
-        BtcToFiat.insert(doc);
-      }
-      else {
-        doc = {};
-        doc[currency] = dailyData[1];
-        BtcToFiat.update({date: new Date(dailyData[0])}, {$set: doc})
-      }
-    });
-  };
-
-
-  /**
-   * Populate the BtcToFiat rates collection
-   */
-  var repopulateBtcToFiat = function() {
-    BtcToFiat.remove({});
-    importCurrency('EUR', 'insert');
-    importCurrency('USD', 'update');
-  };
-
-
-  // the public API:
-  return {
-    calculateBaseAmount: calculateBaseAmount,
-    getExchangeRate: exchangeRate,
-    repopulateBtcToFiat: repopulateBtcToFiat
-  };
-})();
-
-
+/*
 // Create the BtcToUsd collection if not existing or recreate it if enforced by the environment variable COYNO_REFRESH_RATES.
 Meteor.startup(function () {
   BtcToFiat = BtcToFiat || new Mongo.Collection('BtcToFiat');
-
   if (Meteor.isServer) {
     if (!BtcToFiat.findOne() || process.env.COYNO_REFRESH_RATES)
       Coynverter.repopulateBtcToFiat();
   }
-});
+});*/
+

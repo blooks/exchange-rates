@@ -7,14 +7,14 @@ var testdatabase = require(__dirname+'/testdatabase.js');
 
 program
   .version('0.0.1')
-  .option('-h, --historic', 'Get the conversion of currencies according to historical rates')
+  .option('-c, --conversionhistoric', 'Get the conversion of currencies according to historical rates')
   .option('-d, --testdatabase', 'Test connection to database')
   .parse(process.argv);
 console.error(__dirname);
 console.error('Your command line option: '+process.argv);
 //Average ranks for cities
 if(program.historic){
-  conversionCurrencies.calculateDailyRanking('berlin');
+  conversionCurrencies.getConversion(currency, startDate, endDate);
 }
 if(program.testdatabase){
   testdatabase.testConnection();
