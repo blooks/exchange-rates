@@ -66,8 +66,8 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
       }
     });
   };
-  var exchangeRate;
-  var queryParams = {};
+  var exchangeRate,
+      queryParams = {};
   queryParams.date = new Date(date);
   queryParams[currency] = {$exists: true};
   collection.findOne(queryParams, function (err, document) {
@@ -75,24 +75,54 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
       log.error(err);
     }
     if(document){
+      log.info(document);
       return callback(null, document);
     }else{
-      getOneDateNotInDatabase(date, currency, function (err, result) {
-        if(result){
-          var exchangeRateForDate = {};
-          exchangeRateForDate[currency] = result[currency];
-          exchangeRateForDate.date = new Date(result.date);
-          collection.insert(exchangeRateForDate, function  (err, result) {
+      queryParams.date = new Date(date);
+      queryParams[currency] = {$exists: false};
+      collection.findOne(queryParams, function (err, document) {
+        if(err){
+          log.error(err);
+        }
+        if(document){
+          log.info(document);
+          getOneDateNotInDatabase(date, currency, function (err, result) {
             if(result){
-              log.info(result);
+              var exchangeRateForDate = {};
+              exchangeRateForDate[currency] = result[currency];
+              collection.update({_id: document._id}, {$set: exchangeRateForDate}, function (err, result) {
+                if(result){
+                  log.info(result);
+                }
+                if(err){
+                  log.error(err);
+                }
+              });
             }
             if(err){
               log.error(err);
             }
           });
-        }
-        if(err){
-          log.error(err);
+          return callback(null, document);
+        }else{
+          getOneDateNotInDatabase(date, currency, function (err, result) {
+            if(result){
+              var exchangeRateForDate = {};
+              exchangeRateForDate[currency] = result[currency];
+              exchangeRateForDate.date = new Date(result.date);
+              collection.insert(exchangeRateForDate, function  (err, result) {
+                if(result){
+                  log.info(result);
+                }
+                if(err){
+                  log.error(err);
+                }
+              });
+            }
+            if(err){
+              log.error(err);
+            }
+          });
         }
       });
     }
@@ -204,7 +234,6 @@ var getExchangeRatesForNewCurrency = function (currency, collectionToWriteName, 
                 var conversion = document[currency] * amountToConvert;
                 return callback(null, conversion);
               }else{
-                log.info("No RESULT in DB");
                 var todayUpdate = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
                 _getExchangeRateForOneDate(todayUpdate, currency, collectionToRead, collection, function (err, result) {
                   return callback(null, result);

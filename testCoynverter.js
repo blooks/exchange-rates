@@ -33,7 +33,7 @@ currency = 'EUR';
   return log.info(collection);
 });*/
 
-rates.convert("2015-01-17", "USD",  btcAmount, "bitcoinExchangeRates", function (err, amount) {
+rates.convert("2015-01-17", "EUR",  btcAmount, "bitcoinExchangeRates", function (err, amount) {
   return log.info(amount);
 });
 
