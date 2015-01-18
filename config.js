@@ -8,8 +8,6 @@ var mydb = config.DATABASE;
 var dbMongo = new mongo.Db(mydb, serverMongo, {fsync:true});
 var _ = require('underscore');
 var moment = require('moment');
-var nodemailer = require('nodemailer');
-var smtpTransport = require('nodemailer-smtp-transport');
 
 module.exports = {
   request: request,
@@ -21,8 +19,6 @@ module.exports = {
   dbMongo: dbMongo,
   _: _,
   moment: moment,
-  nodemailer: nodemailer,
-  smtpTransport: smtpTransport,
   username: config.USERNAME,
   password: config.PASSWORD,
   database: config.DATABASE
