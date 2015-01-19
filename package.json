@@ -2,7 +2,7 @@
   "name": "coynverter",
   "version": "0.0.2",
   "description": "Convert currencies according to historical rates.",
-  "main": "script.js",
+  "main": "src/coynverter.js",
   "dependencies": {
     "moment": "2.7.0",
     "request": "2.39.0",
@@ -13,7 +13,7 @@
   },
   "devDependencies": {},
   "scripts": {
-    "test": "test"
+    "test": "jasmine-node --autotest ./spec --color --verbose"
   },
   "repository": {
     "type": "git",
