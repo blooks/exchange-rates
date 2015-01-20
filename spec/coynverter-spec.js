@@ -47,6 +47,6 @@ describe("convert", function () {
   });
 }); 
 
-// coynverter.getExchangeRatesForNewCurrency("meteor", "USD", "bitcoinExchangeRates", function (err, result) {
+// coynverter.getExchangeRatesForNewCurrency("meteor", "CHF", "bitcoinExchangeRates", function (err, result) {
 //   log.info(result);
 // });
