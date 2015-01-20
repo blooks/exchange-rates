@@ -3,7 +3,7 @@ var _db;
 
 module.exports = {
   connectToServer: function (database, callback) {
-    MongoClient.connect( "mongodb://localhost:8081/"+database, function (err, db) {
+    MongoClient.connect( "mongodb://localhost:3001/"+database, function (err, db) {
       _db = db;
       return callback(err);
     });

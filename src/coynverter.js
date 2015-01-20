@@ -237,7 +237,7 @@ Coynverter.prototype.getExchangeRatesForNewCurrency = function (databaseName, cu
               paramsToUpdate[currency] = exchangeRate[currency];
               db.collection(collectionToWriteName).update({_id: document._id}, {$set: paramsToUpdate}, {w:1}, function (err, result) {
                 if(result){
-                  log.info(result);
+                  //log.info(result);
                 }
                 if(err){
                   log.error(err);
