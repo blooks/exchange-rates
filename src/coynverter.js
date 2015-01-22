@@ -62,7 +62,7 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
       log.error(err);
     }
     if(document){
-      log.info(document);
+      //log.info(document);
       return callback(null, document);
     }else{
       queryParams.date = new Date(date);
@@ -101,6 +101,7 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
               db.collection(collectionToWriteName).insert(exchangeRateForDate, {w:1}, function  (err, result) {
                 if(result){
                   log.info(result);
+                  return callback(null, result);
                 }
                 if(err){
                   log.error(err);
@@ -184,7 +185,7 @@ Coynverter.prototype.convert = function (databaseName, date, currency,  amountTo
       }else{
         var todayUpdate = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
         _getExchangeRateForOneDate(todayUpdate, currency, collectionToRead, function (err, result) {
-          return callback(null, result);
+          return callback(null, result[currency]*amountToConvert);
         });
       }
     });
