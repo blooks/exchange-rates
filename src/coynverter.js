@@ -121,21 +121,20 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
 /**
  * Coynverter constructor for Coynverter package
  */
-function Coynverter() {
-  
+function Coynverter(mongourl) {
+  this.mongourl = mongourl;
 }
 
 /**
  * update the information available on the database
- * @param  {String}   databaseName       Name of the database where to save/query information about exchange rates
  * @param  {String}   collectionToUpdate Collection in the mongodb to store the information
  * @param  {String}   currency           the currency to find the conversion rate
  * @param  {Function} callback           return two possible objects, error and result of the operation
  * @return {undefined}                   not return value
  */
-Coynverter.prototype.update = function (databaseName, collectionToUpdate, currency, callback) {
+Coynverter.prototype.update = function (collectionToUpdate, currency, callback) {
   "use strict";
-  mongoUtil.connectToServer(databaseName, function ( err ) {
+  mongoUtil.connectToServer(this.mongourl, function ( err ) {
     var db = mongoUtil.getDb();
     db.collection(collectionToUpdate, function (error, collection) {
       if(collection){
@@ -160,7 +159,6 @@ Coynverter.prototype.update = function (databaseName, collectionToUpdate, curren
 
 /**
  * convert convert a specified amount of BTC to a specified currency for one date
- * @param  {String}   databaseName     Name of the database where to save/query information about exchange rates
  * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
  * @param  {String}   currency         the currency to find the conversion rate
  * @param  {Number}   amountToConvert  the amount of bitcoins to convert to the currency specified
@@ -168,9 +166,9 @@ Coynverter.prototype.update = function (databaseName, collectionToUpdate, curren
  * @param  {Function} callback         return two possible objects, error and result of the operation
  * @return {undefined}                 not return value
  */
-Coynverter.prototype.convert = function (databaseName, date, currency,  amountToConvert, collectionToRead, callback) {
+Coynverter.prototype.convert = function (date, currency,  amountToConvert, collectionToRead, callback) {
   "use strict";
-  mongoUtil.connectToServer(databaseName, function ( err ) {
+  mongoUtil.connectToServer(this.mongourl, function ( err ) {
     var db = mongoUtil.getDb();
     var queryParams = {};
     queryParams.date = new Date(date);
@@ -194,13 +192,12 @@ Coynverter.prototype.convert = function (databaseName, date, currency,  amountTo
 
 /**
  * getExchangeRatesForNewCurrency description
- * @param  {String}   databaseName          Name of the database where to save/query information about exchange rates
  * @param  {String}   currency              the currency to find the conversion rate
  * @param  {String}   collectionToWriteName collection where to check if the information is already available
  * @param  {Function} callback              return two possible objects, error and result of the operation
  * @return {undefined}                      not return value
  */
-Coynverter.prototype.getExchangeRatesForNewCurrency = function (databaseName, currency, collectionToWriteName, callback) {
+Coynverter.prototype.getExchangeRatesForNewCurrency = function (currency, collectionToWriteName, callback) {
   "use strict";
   var today = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
   var url = 'https://api.coindesk.com/v1/bpi/historical/close.json?start=2010-07-17&end='+today+'&currency='+currency;
@@ -224,7 +221,7 @@ Coynverter.prototype.getExchangeRatesForNewCurrency = function (databaseName, cu
         datesAndExchangeRates.date = new Date(prop);
         arrayValuesForDatabase.push(datesAndExchangeRates);
       });
-      mongoUtil.connectToServer(databaseName, function ( err ) {
+      mongoUtil.connectToServer(this.mongourl, function ( err ) {
         var db = mongoUtil.getDb();
         arrayValuesForDatabase.forEach(function (exchangeRate) {
           var queryParams = {};
