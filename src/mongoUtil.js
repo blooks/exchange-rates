@@ -12,10 +12,17 @@ module.exports = {
    * @return {[type]}            [description]
    */
   connectToServer: function (database, port, user, password, callback) {
-    MongoClient.connect( "mongodb://localhost:+"+port+"/"+database, function (err, db) {
-      _db = db;
-      return callback(err);
-    });
+    if(user.length>0 && password.length>0){
+      MongoClient.connect( "mongodb://"+user+":"+password+"@localhost:+"+port+"/"+database, function (err, db) {
+        _db = db;
+        return callback(err);
+      });
+    }else{
+      MongoClient.connect( "mongodb://localhost:+"+port+"/"+database, function (err, db) {
+        _db = db;
+        return callback(err);
+      });
+    }
   },
   getDb: function() {
     return _db;
