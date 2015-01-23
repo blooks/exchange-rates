@@ -7,9 +7,7 @@ var request = require('request'),
     //Development
     log = require('tracer').colorConsole(),
     uuid = require('node-uuid'),
-    mongoUtil = require('./mongoUtil');
-
-var currencies = ["EUR", "USD"];
+    mongoUtil = require('./mongo_util');
 
 /**
  * _getOneDateNotInDatabase looks for one date not available in the database for the currency at the day specified in the method call (Internal method)
@@ -52,6 +50,7 @@ var _getOneDateNotInDatabase = function (date, currency, callback) {
 var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName, callback) {
   //Variables
   "use strict";
+  log.info(date);
   var exchangeRate,
       queryParams = {},
       db = mongoUtil.getDb();
@@ -62,37 +61,22 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
       log.error(err);
     }
     if(document){
-      //log.info(document);
+      log.info(document);
       return callback(null, document);
     }else{
       queryParams.date = new Date(date);
       queryParams[currency] = {$exists: false};
       db.collection(collectionToWriteName).findOne(queryParams, function (err, document) {
         if(err){
-          log.error(err);
+          log.error("ERROR finding document");
+          return callback(err, null);
         }
         if(document){
-          //log.info(document);
-          _getOneDateNotInDatabase(date, currency, function (err, result) {
-            if(result){
-              var exchangeRateForDate = {};
-              exchangeRateForDate[currency] = result[currency];
-              db.collection(collectionToWriteName).update({_id: document._id}, {$set: exchangeRateForDate}, {w:1}, function (err, result) {
-                if(result){
-                  log.info(result);
-                }
-                if(err){
-                  log.error(err);
-                }
-              });
-            }
-            if(err){
-              log.error(err);
-            }
-          });
+          log.error("Document in database");
           return callback(null, document);
         }else{
-          _getOneDateNotInDatabase(date, currency, function (err, result) {
+          log.error("Need to insert data");
+          _getOneDateNotInDatabase(moment(date).format("YYYY-MM-DD"), currency, function (err, result) {
             if(result){
               var exchangeRateForDate = {};
               exchangeRateForDate._id = uuid.v1();
@@ -104,12 +88,12 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
                   return callback(null, result);
                 }
                 if(err){
-                  log.error(err);
+                  return callback(err, null);                  
                 }
               });
             }
             if(err){
-              log.error(err);
+              return callback(err, null);
             }
           });
         }
@@ -119,87 +103,16 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
 };
 
 /**
- * Coynverter constructor for Coynverter package
- */
-function Coynverter (mongourl) {
-  this.mongo = mongourl;
-}
-
-/**
- * update the information available on the database
- * @param  {String}   collectionToUpdate Collection in the mongodb to store the information
- * @param  {String}   currency           the currency to find the conversion rate
- * @param  {Function} callback           return two possible objects, error and result of the operation
- * @return {undefined}                   not return value
- */
-Coynverter.prototype.update = function (collectionToUpdate, currency, callback) {
-  "use strict";
-  mongoUtil.connectToServer(this.mongo, function ( err ) {
-    var db = mongoUtil.getDb();
-    db.collection(collectionToUpdate, function (error, collection) {
-      if(collection){
-        try {
-          var todayUpdate = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
-          _getExchangeRateForOneDate(todayUpdate, currency, collectionToUpdate, function (err, result) {
-            if(result){
-              return callback(null, result);
-            }
-          });
-        } catch (err) {
-          log.error(err);
-          return callback(err, null);
-        }
-      }
-      if(error){
-        log.error(error);
-      }
-    });
-  });
-};
-
-/**
- * convert convert a specified amount of BTC to a specified currency for one date
- * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
- * @param  {String}   currency         the currency to find the conversion rate
- * @param  {Number}   amountToConvert  the amount of bitcoins to convert to the currency specified
- * @param  {String}   collectionToRead collection where to check if the information is already available
- * @param  {Function} callback         return two possible objects, error and result of the operation
- * @return {undefined}                 not return value
- */
-Coynverter.prototype.convert = function (date, currency,  amountToConvert, collectionToRead, callback) {
-  "use strict";
-  mongoUtil.connectToServer(this.mongo, function ( err ) {
-    var db = mongoUtil.getDb();
-    var queryParams = {};
-    queryParams.date = new Date(date);
-    queryParams[currency] = {$exists: true};
-    db.collection(collectionToRead).findOne(queryParams, function (err, document) {
-      if(err){
-        log.error(err);
-      }
-      if(document){
-        var conversion = document[currency] * amountToConvert;
-        return callback(null, conversion);
-      }else{
-        var todayUpdate = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
-        _getExchangeRateForOneDate(todayUpdate, currency, collectionToRead, function (err, result) {
-          return callback(null, result[currency]*amountToConvert);
-        });
-      }
-    });
-  });
-};
-
-/**
  * getExchangeRatesForNewCurrency description
  * @param  {String}   currency              the currency to find the conversion rate
  * @param  {String}   collectionToWriteName collection where to check if the information is already available
+ * @param  {String}   mongourl              address of the mongourl
  * @param  {Function} callback              return two possible objects, error and result of the operation
  * @return {undefined}                      not return value
  */
-Coynverter.prototype.getExchangeRatesForNewCurrency = function (currency, collectionToWriteName, callback) {
+var _getExchangeRatesForCurrencies = function (currency, collectionToWriteName, mongourl, callback) {
   "use strict";
-  var mongo = this.mongo;
+  var mongo = mongourl;
   var today = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
   var url = 'https://api.coindesk.com/v1/bpi/historical/close.json?start=2010-07-17&end='+today+'&currency='+currency;
   return request.get({uri: url}, function (err, response, body) {
@@ -258,6 +171,88 @@ Coynverter.prototype.getExchangeRatesForNewCurrency = function (currency, collec
       });
     }
   });
+};
+/**
+ * Coynverter constructor for Coynverter package
+ */
+function Coynverter (mongourl, collection) {
+  this.collectionToQueryData = collection;
+  this.mongo = mongourl;
+}
+
+/**
+ * update the information available on the database for a provided currency
+ * @param  {String}   currency           the currency to find the conversion rate
+ * @param  {Function} callback           return two possible objects, error and result of the operation
+ * @return {undefined}                   not return value
+ */
+Coynverter.prototype.update = function (currency, callback) {
+  "use strict";
+  var mongourl = this.mongo,
+      collectionToQueryData = this.collectionToQueryData;
+  log.error(collectionToQueryData);
+  try{
+    mongoUtil.connectToServer(mongourl, function ( err ) {
+      var db = mongoUtil.getDb();
+      db.collection(collectionToQueryData, function (error, collection) {
+        if(collection){
+          try {
+            _getExchangeRatesForCurrencies(currency, collectionToQueryData, mongourl, function (err, result) {
+              if(result){
+                return callback(null, result);
+              }
+            });
+          } catch (err) {
+            log.error(err);
+            return callback(err, null);
+          }
+        }
+        if(error){
+          log.error(error);
+        }
+      });
+    });
+  }catch(err){
+    return callback(err, null);
+  }
+};
+
+/**
+ * convert convert a specified amount of BTC to a specified currency for one date
+ * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
+ * @param  {String}   currency         the currency to find the conversion rate
+ * @param  {Number}   amountToConvert  the amount of bitcoins to convert to the currency specified
+ * @param  {Function} callback         return two possible objects, error and result of the operation
+ * @return {undefined}                 not return value
+ */
+Coynverter.prototype.convert = function (date, currency, amountToConvert, callback) {
+  "use strict";
+  var mongourl = this.mongo,
+      collectionToQueryData = this.collectionToQueryData;
+  try{
+    mongoUtil.connectToServer(mongourl, function ( err ) {
+      var db = mongoUtil.getDb();
+      var queryParams = {};
+      queryParams.date = new Date(date);
+      queryParams[currency] = {$exists: true};
+      db.collection(collectionToQueryData).findOne(queryParams, function (err, document) {
+        if(err){
+          return callback(err, null);
+        }
+        if(document){
+          var conversion = document[currency] * amountToConvert;
+          return callback(null, conversion);
+        }else{
+          var todayUpdate = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
+          _getExchangeRateForOneDate(todayUpdate, currency, collectionToQueryData, function (err, result) {
+            return callback(null, result[currency]*amountToConvert);
+          });
+        }
+      });
+    });
+  }catch(err){
+    return callback(err, null);
+  }
 };
 
 module.exports = Coynverter;
