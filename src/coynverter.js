@@ -50,7 +50,6 @@ var _getOneDateNotInDatabase = function (date, currency, callback) {
 var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName, callback) {
   //Variables
   "use strict";
-  log.info(date);
   var exchangeRate,
       queryParams = {},
       db = mongoUtil.getDb();
