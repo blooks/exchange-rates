@@ -13,7 +13,7 @@ module.exports = {
       }
     });
   },
-  getDb: function() {
+  getDb: function () {
     return _db;
   }
 };
