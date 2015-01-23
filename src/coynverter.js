@@ -9,8 +9,6 @@ var request = require('request'),
     uuid = require('node-uuid'),
     mongoUtil = require('./mongoUtil');
 
-var currencies = ["EUR", "USD"];
-
 /**
  * _getOneDateNotInDatabase looks for one date not available in the database for the currency at the day specified in the method call (Internal method)
  * @param  {String}   date     date to look for for the exchange rate
@@ -146,12 +144,11 @@ Coynverter.prototype.update = function (collectionToUpdate, currency, callback) 
             }
           });
         } catch (err) {
-          log.error(err);
           return callback(err, null);
         }
       }
       if(error){
-        log.error(error);
+        return callback(err, null);
       }
     });
   });
@@ -175,7 +172,7 @@ Coynverter.prototype.convert = function (date, currency,  amountToConvert, colle
     queryParams[currency] = {$exists: true};
     db.collection(collectionToRead).findOne(queryParams, function (err, document) {
       if(err){
-        log.error(err);
+        return callback(err, null);
       }
       if(document){
         var conversion = document[currency] * amountToConvert;
@@ -212,8 +209,7 @@ Coynverter.prototype.getExchangeRatesForNewCurrency = function (currency, collec
     if(body){
       var ratesValues = JSON.parse(body),
           exchangeRatesCurrency = ratesValues.bpi,
-          arrayValuesForDatabase = [],
-          db = mongoUtil.getDb();
+          arrayValuesForDatabase = [];
       //Format information for storage new currency data in database
       _.each(exchangeRatesCurrency, function (value, prop) {
         var datesAndExchangeRates = {};
@@ -222,39 +218,44 @@ Coynverter.prototype.getExchangeRatesForNewCurrency = function (currency, collec
         datesAndExchangeRates.date = new Date(prop);
         arrayValuesForDatabase.push(datesAndExchangeRates);
       });
-      mongoUtil.connectToServer(mongo, function ( err ) {
-        var db = mongoUtil.getDb();
-        arrayValuesForDatabase.forEach(function (exchangeRate) {
-          var queryParams = {};
-          queryParams.date = exchangeRate.date;
-          db.collection(collectionToWriteName).findOne(queryParams, function (err, document) {
-            if(err){
-              log.error(err);
-            }
-            if(document){
-              var paramsToUpdate = {};
-              paramsToUpdate[currency] = exchangeRate[currency];
-              db.collection(collectionToWriteName).update({_id: document._id}, {$set: paramsToUpdate}, {w:1}, function (err, result) {
-                if(result){
-                  //log.info(result);
-                }
-                if(err){
-                  log.error(err);
-                }
-              });
-            }
-            else{
-              db.collection(collectionToWriteName).insert(exchangeRate, {w:1}, function  (err, result) {
-                if(result){
-                  return callback(null, result);
-                }
-                if(err){
-                  return callback(err, null);
-                }
-              });
-            }
+      mongoUtil.connectToServer(mongo, function ( err , result) {
+        if(err){
+          return callback(err, null);
+        }
+        if(result){
+          var db = mongoUtil.getDb();
+          arrayValuesForDatabase.forEach(function (exchangeRate) {
+            var queryParams = {};
+            queryParams.date = exchangeRate.date;
+            db.collection(collectionToWriteName).findOne(queryParams, function (err, document) {
+              if(err){
+                return callback(err, null);
+              }
+              if(document){
+                var paramsToUpdate = {};
+                paramsToUpdate[currency] = exchangeRate[currency];
+                db.collection(collectionToWriteName).update({_id: document._id}, {$set: paramsToUpdate}, {w:1}, function (err, result) {
+                  if(result){
+                    return callback(null, result);
+                  }
+                  if(err){
+                    return callback(err, null);
+                  }
+                });
+              }
+              else{
+                db.collection(collectionToWriteName).insert(exchangeRate, {w:1}, function  (err, result) {
+                  if(result){
+                    return callback(null, result);
+                  }
+                  if(err){
+                    return callback(err, null);
+                  }
+                });
+              }
+            });
           });
-        });
+        }
       });
     }
   });
