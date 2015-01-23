@@ -121,8 +121,8 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
 /**
  * Coynverter constructor for Coynverter package
  */
-function Coynverter(mongourl) {
-  this.mongourl = mongourl;
+function Coynverter (mongourl) {
+  this.mongo = mongourl;
 }
 
 /**
@@ -134,7 +134,7 @@ function Coynverter(mongourl) {
  */
 Coynverter.prototype.update = function (collectionToUpdate, currency, callback) {
   "use strict";
-  mongoUtil.connectToServer(this.mongourl, function ( err ) {
+  mongoUtil.connectToServer(this.mongo, function ( err ) {
     var db = mongoUtil.getDb();
     db.collection(collectionToUpdate, function (error, collection) {
       if(collection){
@@ -168,7 +168,7 @@ Coynverter.prototype.update = function (collectionToUpdate, currency, callback) 
  */
 Coynverter.prototype.convert = function (date, currency,  amountToConvert, collectionToRead, callback) {
   "use strict";
-  mongoUtil.connectToServer(this.mongourl, function ( err ) {
+  mongoUtil.connectToServer(this.mongo, function ( err ) {
     var db = mongoUtil.getDb();
     var queryParams = {};
     queryParams.date = new Date(date);
@@ -199,6 +199,7 @@ Coynverter.prototype.convert = function (date, currency,  amountToConvert, colle
  */
 Coynverter.prototype.getExchangeRatesForNewCurrency = function (currency, collectionToWriteName, callback) {
   "use strict";
+  var mongo = this.mongo;
   var today = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
   var url = 'https://api.coindesk.com/v1/bpi/historical/close.json?start=2010-07-17&end='+today+'&currency='+currency;
   return request.get({uri: url}, function (err, response, body) {
@@ -221,7 +222,7 @@ Coynverter.prototype.getExchangeRatesForNewCurrency = function (currency, collec
         datesAndExchangeRates.date = new Date(prop);
         arrayValuesForDatabase.push(datesAndExchangeRates);
       });
-      mongoUtil.connectToServer(this.mongourl, function ( err ) {
+      mongoUtil.connectToServer(mongo, function ( err ) {
         var db = mongoUtil.getDb();
         arrayValuesForDatabase.forEach(function (exchangeRate) {
           var queryParams = {};
