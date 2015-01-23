@@ -21,7 +21,7 @@ var _getOneDateNotInDatabase = function (date, currency, callback) {
   var url = 'https://api.coindesk.com/v1/bpi/historical/close.json?start='+date+'&end='+date+'&currency='+currency;
   request.get({uri: url}, function (err, response, body) {
     if(err){
-      log.error(err);
+      return callback(err, null);
     }
     if(response){
       //console.log(response);
@@ -58,24 +58,20 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
   queryParams[currency] = {$exists: true};
   db.collection(collectionToWriteName).findOne(queryParams, function (err, document) {
     if(err){
-      log.error(err);
+      return callback(err, null);
     }
     if(document){
-      log.info(document);
       return callback(null, document);
     }else{
       queryParams.date = new Date(date);
       queryParams[currency] = {$exists: false};
       db.collection(collectionToWriteName).findOne(queryParams, function (err, document) {
         if(err){
-          log.error("ERROR finding document");
           return callback(err, null);
         }
         if(document){
-          log.error("Document in database");
           return callback(null, document);
         }else{
-          log.error("Need to insert data");
           _getOneDateNotInDatabase(moment(date).format("YYYY-MM-DD"), currency, function (err, result) {
             if(result){
               var exchangeRateForDate = {};
@@ -84,7 +80,6 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
               exchangeRateForDate.date = new Date(result.date);
               db.collection(collectionToWriteName).insert(exchangeRateForDate, {w:1}, function  (err, result) {
                 if(result){
-                  log.info(result);
                   return callback(null, result);
                 }
                 if(err){
@@ -142,17 +137,17 @@ var _getExchangeRatesForCurrencies = function (currency, collectionToWriteName, 
           queryParams.date = exchangeRate.date;
           db.collection(collectionToWriteName).findOne(queryParams, function (err, document) {
             if(err){
-              log.error(err);
+              return callback(err, null);
             }
             if(document){
               var paramsToUpdate = {};
               paramsToUpdate[currency] = exchangeRate[currency];
               db.collection(collectionToWriteName).update({_id: document._id}, {$set: paramsToUpdate}, {w:1}, function (err, result) {
                 if(result){
-                  //log.info(result);
+                  return callback(null, result);
                 }
                 if(err){
-                  log.error(err);
+                  return callback(err, null);
                 }
               });
             }
@@ -190,7 +185,6 @@ Coynverter.prototype.update = function (currency, callback) {
   "use strict";
   var mongourl = this.mongo,
       collectionToQueryData = this.collectionToQueryData;
-  log.error(collectionToQueryData);
   try{
     mongoUtil.connectToServer(mongourl, function ( err ) {
       var db = mongoUtil.getDb();
@@ -203,12 +197,11 @@ Coynverter.prototype.update = function (currency, callback) {
               }
             });
           } catch (err) {
-            log.error(err);
             return callback(err, null);
           }
         }
         if(error){
-          log.error(error);
+          return callback(err, null);
         }
       });
     });
