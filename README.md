@@ -26,13 +26,14 @@ A npm package to convert any currency based on public available exchange rate da
 
   /**
    * convert convert a specified amount of BTC to a specified currency for one date
-   * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
-   * @param  {String}   currency         the currency to find the conversion rate
+   * @param  {String}   fromCurrency     the currency to find the conversion rate
+   * @param  {String}   toCurrency       the currency to find the conversion rate
    * @param  {Number}   amountToConvert  the amount of bitcoins to convert to the currency specified
+   * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
    * @param  {Function} callback         return two possible objects, error and result of the operation
    * @return {undefined}                 not return value
    */
-  coynoconverter.convert(date, currency,  amountToConvert, collectionToRead, function (err, result) {
+  coynoconverter.convert(fromCurrency,  toCurrency, amountToConvert, date, function (err, result) {
 
   });
 ```

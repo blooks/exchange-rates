@@ -211,14 +211,18 @@ Coynverter.prototype.update = function (currency, callback) {
 
 /**
  * convert convert a specified amount of BTC to a specified currency for one date
- * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
- * @param  {String}   currency         the currency to find the conversion rate
+ * @param  {String}   fromCurrency     the currency to find the conversion rate
+ * @param  {String}   toCurrency       the currency to find the conversion rate
  * @param  {Number}   amountToConvert  the amount of bitcoins to convert to the currency specified
+ * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
  * @param  {Function} callback         return two possible objects, error and result of the operation
  * @return {undefined}                 not return value
  */
-Coynverter.prototype.convert = function (date, currency, amountToConvert, callback) {
+Coynverter.prototype.convert = function (fromCurrency, toCurrency, amountToConvert, date, callback) {
   "use strict";
+  if(toCurrency==='BTC'){
+    return callback("Sorry, at the moment we do not support conversion to Bitcoin", null);
+  }
   var mongourl = this.mongo,
       collectionToQueryData = this.collectionToQueryData;
   try{
@@ -226,18 +230,18 @@ Coynverter.prototype.convert = function (date, currency, amountToConvert, callba
       var db = mongoUtil.getDb();
       var queryParams = {};
       queryParams.date = new Date(date);
-      queryParams[currency] = {$exists: true};
+      queryParams[toCurrency] = {$exists: true};
       db.collection(collectionToQueryData).findOne(queryParams, function (err, document) {
         if(err){
           return callback(err, null);
         }
         if(document){
-          var conversion = document[currency] * amountToConvert;
+          var conversion = document[toCurrency] * amountToConvert;
           return callback(null, conversion);
         }else{
           var todayUpdate = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
-          _getExchangeRateForOneDate(todayUpdate, currency, collectionToQueryData, function (err, result) {
-            return callback(null, result[currency]*amountToConvert);
+          _getExchangeRateForOneDate(todayUpdate, toCurrency, collectionToQueryData, function (err, result) {
+            return callback(null, result[toCurrency]*amountToConvert);
           });
         }
       });
