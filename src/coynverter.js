@@ -54,7 +54,6 @@ var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
             if (err) {
               console.log(err);
             } if (docs) {
-              console.log("Updated an entry.");
               callback();
             }
             });
@@ -81,7 +80,6 @@ Coynverter.prototype.update = function (callback) {
   var timeToday = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
   //Currently Bitcoin is the only from currency
   var beginTime = '2010-07-17';
-  console.log(self.toCurrencies);
   var CoinDeskAPI = new coindeskapi();
   CoinDeskAPI.getPricesForMultipleCurrencies(beginTime, timeToday, self.toCurrencies, passExchangeRatesToMongo(self.mongourl, self.collectionName, callback));
 };
