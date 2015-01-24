@@ -1,6 +1,5 @@
 //15.01.2015 LFG Working under testing purposes//Now heavy development on this file, full of crap, many thinks to improve
-var request = require('request'),
-    moment = require('moment'),
+var moment = require('moment'),
     _ = require('underscore'),
     coindeskapi = require('coindesk-api'),
     async = require('async'),
@@ -20,13 +19,12 @@ function Coynverter (mongourl) {
   this.toCurrencies = toCurrencies;
   this.fromCurrencies = fromCurrencies;
   this.collectionName = 'exchangeratesfromnpm';
-};
+}
 
 
 
 var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
   return function (err, exchangeRates) {
-    var self = this;
     if (err) {
       callback(err, null);
     }
@@ -36,7 +34,12 @@ var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
       } else {
         var collection = db.collection(collectionName);
         async.each(exchangeRates, function (item, callback) {
-          collection.update({time: item.time}, item, {w:1, upsert:true}, function(err, docs) {
+          var time = new Date(parseInt(item.time))  ;
+          var mongoItem = {
+            time: time,
+            rates: item.rates
+          };
+          collection.update({time: mongoItem.time}, mongoItem, {w:1, upsert:true}, function(err, docs) {
             if (err) {
               callback(err);
             } if (docs) {
@@ -55,11 +58,23 @@ var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
   }
 };
 
+var getExchangeRate = function(mongourl, collectionName, fromCurrency, toCurrency, date, callback) {
+  var fromDate = new Date(date.getTime() - (86400000 / 2));
+  var toDate = new Date(date.getTime() + (86400000 / 2));
+  MongoClient.connect(mongourl, function (err, db) {
+    if (err) {
+      callback(err, null);
+    }
+    var collection = db.collection(collectionName);
+    collection.find({time: {$gt: fromDate, $lt: toDate}}).toArray(function(err, items) {
+      db.close();
+      callback(null, items[0].rates[toCurrency]);
+    });
+  });
+};
+
 /**
  * getExchangeRatesForNewCurrency description
- * @param  {String}   currency              the currency to find the conversion rate
- * @param  {String}   collectionToWriteName collection where to check if the information is already available
- * @param  {String}   mongourl              address of the mongourl
  * @param  {Function} callback              return two possible objects, error and result of the operation
  * @return {undefined}                      not return value
  */
@@ -72,23 +87,38 @@ Coynverter.prototype.update = function (callback) {
   var CoinDeskAPI = new coindeskapi();
   CoinDeskAPI.getPricesForMultipleCurrencies(beginTime, timeToday, self.toCurrencies, passExchangeRatesToMongo(self.mongourl, self.collectionName, callback));
 };
+
+var convert = function(amount, callback) {
+  return function(err, result) {
+    if (err) {
+      callback(err)
+    }
+    callback(null, amount*result);
+  }
+};
 /**
+ *
  * convert convert a specified amount of BTC to a specified currency for one date
  * @param  {String}   fromCurrency     the currency to find the conversion rate
  * @param  {String}   toCurrency       the currency to find the conversion rate
  * @param  {Number}   amountToConvert  the amount of bitcoins to convert to the currency specified
- * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
+ * @param  {Date}   date             the day to look for in the database, if no data in database request to coinbase API
  * @param  {Function} callback         return two possible objects, error and result of the operation
  * @return {undefined}                 not return value
  */
 Coynverter.prototype.convert = function (fromCurrency, toCurrency, amountToConvert, date, callback) {
-  if (fromCurrency === toCurrency) {
-    return 1;
-  }
   "use strict";
-  if (toCurrency === 'BTC') {
-    return callback(new Error("Sorry, at the moment we do not support conversion to Bitcoin"), null);
+  var self = this;
+  if (fromCurrency === toCurrency) {
+    callback(null, 1);
   }
+  if (_.indexOf(self.fromCurrencies, fromCurrency) < 0) {
+    callback(new Error('Coynverter: Cannot convert from '+ fromCurrency+'!'));
+  }
+  if (_.indexOf(self.toCurrencies, toCurrency) < 0) {
+    callback(new Error('Coynverter: Cannot convert to '+ toCurrency+'!'));
+  }
+  getExchangeRate(self.mongourl, self.collectionName, fromCurrency, toCurrency, date, convert(amountToConvert, callback));
 };
 
 
