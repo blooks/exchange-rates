@@ -4,5 +4,9 @@ var Coynverter = new coynverter('mongodb://127.0.0.1:3001/meteor');
 
 
 Coynverter.update(function(err, response) {
-    console.log(response);
+    if (err) {
+        console.log(err);
+    } else {
+        console.log(response);
+    }
 });

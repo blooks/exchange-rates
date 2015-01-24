@@ -20,19 +20,6 @@ function Coynverter (mongourl) {
   this.toCurrencies = toCurrencies;
   this.fromCurrencies = fromCurrencies;
   this.collectionName = 'exchangeratesfromnpm';
-}
-/**
- * convert convert a specified amount of BTC to a specified currency for one date
- * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
- * @param  {String}   currency         the currency to find the conversion rate
- * @param  {Number}   amountToConvert  the amount of bitcoins to convert to the currency specified
- * @param  {String}   collectionToRead collection where to check if the information is already available
- * @param  {Function} callback         return two possible objects, error and result of the operation
- * @return {undefined}                 not return value
- */
-Coynverter.prototype.convert = function (date, currency,  amountToConvert, collectionToRead, callback) {
-  "use strict";
-  var self = this;
 };
 
 
@@ -41,23 +28,25 @@ var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
   return function (err, exchangeRates) {
     var self = this;
     if (err) {
-      console.log(err);
-      return;
+      callback(err, null);
     }
     MongoClient.connect(mongourl, function (err, db) {
       if (err) {
-        console.log(err);
+        callback(err, null);
       } else {
         var collection = db.collection(collectionName);
         async.each(exchangeRates, function (item, callback) {
           collection.update({time: item.time}, item, {w:1, upsert:true}, function(err, docs) {
             if (err) {
-              console.log(err);
+              callback(err);
             } if (docs) {
               callback();
             }
             });
           }, function (err) {
+          if (err) {
+            callback(err);
+          }
           db.close();
           callback(null, "Done");
         });
