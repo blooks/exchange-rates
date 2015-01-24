@@ -120,7 +120,7 @@ Coynverter.prototype.convert = function (fromCurrency, toCurrency, amountToConve
   "use strict";
   var self = this;
   if (fromCurrency === toCurrency) {
-    callback(null, 1);
+    callback(null, amountToConvert);
   }
   if (date < new Date('2010-07-17')) {
     callback(new Error('Coynverter: no data for that time!'));

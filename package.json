@@ -1,6 +1,6 @@
 {
   "name": "coyno-converter",
-  "version": "0.0.19",
+  "version": "0.0.20",
   "description": "Convert currencies according to historical rates.",
   "main": "src/coynverter.js",
   "dependencies": {
