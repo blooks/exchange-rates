@@ -4,7 +4,7 @@
   "description": "Convert currencies according to historical rates.",
   "main": "src/coynverter.js",
   "dependencies": {
-    "coindesk-api": "0.0.2",
+    "coindesk-api": "0.0.3",
     "moment": "2.7.0",
     "mongodb": "1.4.6",
     "node-uuid": "1.4.2",

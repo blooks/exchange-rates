@@ -7,13 +7,15 @@ var request = require('request'),
     //Development
     log = require('tracer').colorConsole(),
     uuid = require('node-uuid'),
-
-    coindeskapi = require('coindesk-api');
+    coindeskapi = require('coindesk-api'),
     mongoUtil = require('./mongoUtil');
+
 
 var toCurrencies = ["USD", "EUR"];
 
 var fromCurrencies = ["BTC"];
+
+var dataBaseName = 'exchangeratesfromnpm';
 
 /**
  * Coynverter constructor for Coynverter package
@@ -23,38 +25,6 @@ function Coynverter (mongourl) {
   this.toCurrencies = toCurrencies;
   this.fromCurrencies = fromCurrencies;
 }
-
-/**
- * update the information available on the database
- * @param  {String}   collectionToUpdate Collection in the mongodb to store the information
- * @param  {String}   currency           the currency to find the conversion rate
- * @param  {Function} callback           return two possible objects, error and result of the operation
- * @return {undefined}                   not return value
- */
-Coynverter.prototype.update = function () {
-  "use strict";
-  mongoUtil.connectToServer(this.mongo, function ( err ) {
-    var db = mongoUtil.getDb();
-    db.collection(collectionToUpdate, function (error, collection) {
-      if(collection){
-        try {
-          var todayUpdate = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
-          _getExchangeRateForOneDate(todayUpdate, currency, collectionToUpdate, function (err, result) {
-            if(result){
-              return callback(null, result);
-            }
-          });
-        } catch (err) {
-          return callback(err, null);
-        }
-      }
-      if(error){
-        return callback(err, null);
-      }
-    });
-  });
-};
-
 /**
  * convert convert a specified amount of BTC to a specified currency for one date
  * @param  {String}   date             the day to look for in the database, if no data in database request to coinbase API
@@ -89,7 +59,49 @@ Coynverter.prototype.convert = function (date, currency,  amountToConvert, colle
 };
 
 
-
+var feedExchangeRatesToMongo = function(err, exchangeRates, callback) {
+  mongoUtil.connectToServer(mongo, function ( err , result) {
+    if(err) {
+      return callback(err, null);
+    }
+    if(result) {
+      var db = mongoUtil.getDb();
+      exchangeRates.forEach(function (exchangeRateItem, key) {
+        var newMongoItem = {};
+        console.log(key);/*
+        newMongoItem.date =key;
+        db.collection(dataBaseName).findOne(queryParams, function (err, document) {
+          if(err){
+            return callback(err, null);
+          }
+          if(document){
+            var paramsToUpdate = {};
+            paramsToUpdate[currency] = exchangeRate[currency];
+            db.collection(collectionToWriteName).update({_id: document._id}, {$set: paramsToUpdate}, {w:1}, function (err, result) {
+              if(result){
+                return callback(null, result);
+              }
+              if(err){
+                return callback(err, null);
+              }
+            });
+          }
+          else{
+            db.collection(dataBaseName).insert(exchangeRate, {w:1}, function  (err, result) {
+              if(result){
+                return callback(null, result);
+              }
+              if(err){
+                return callback(err, null);
+              }
+            });
+          }
+        });
+        */
+      });
+    }
+  });
+};
 
 
 /**
@@ -109,11 +121,7 @@ Coynverter.prototype.update = function () {
 
   var beginTime = '2010-07-17';
   var CoinDeskAPI = new coindeskapi();
-
-  CoinDeskAPI.getPricesForMultipleCurrencies(beginTime, timeToday, ['USD','EUR'], function(err, result) {
-        console.log(result);
-      }
-  );
+  CoinDeskAPI.getPricesForMultipleCurrencies(beginTime, timeToday, ['USD','EUR'], feedExchangeRatesToMongo);
   /*
       //Format information for storage new currency data in database
       _.each(exchangeRatesCurrency, function (value, prop) {
@@ -160,6 +168,7 @@ Coynverter.prototype.update = function () {
     }
   });
 };
+
 /**
  * Coynverter constructor for Coynverter package
  */
