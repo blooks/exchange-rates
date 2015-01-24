@@ -215,7 +215,10 @@ Coynverter.prototype.update = function () {
   var beginTime = '2010-07-17';
   var CoinDeskAPI = new coindeskapi();
 
-  CoinDeskAPI.getAllPrices(beginTime, timeToday, putIntoMongo);
+  CoinDeskAPI.getPricesForMultipleCurrencies(beginTime, timeToday, ['USD','EUR'], function(err, result) {
+        console.log(result);
+      }
+  );
   /*
       //Format information for storage new currency data in database
       _.each(exchangeRatesCurrency, function (value, prop) {
