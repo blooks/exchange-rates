@@ -16,8 +16,6 @@ var toCurrencies = ["USD", "EUR"];
 var fromCurrencies = ["BTC"];
 
 /**
-<<<<<<< HEAD
-=======
  * Coynverter constructor for Coynverter package
  */
 function Coynverter (mongourl) {
