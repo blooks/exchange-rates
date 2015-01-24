@@ -2,28 +2,24 @@
 var request = require('request'),
     moment = require('moment'),
     _ = require('underscore'),
-    //Production
-    //log = require('tracer').colorConsole({level: 'error'}),
-    //Development
-    log = require('tracer').colorConsole(),
-    uuid = require('node-uuid'),
     coindeskapi = require('coindesk-api'),
-    mongoUtil = require('./mongoUtil');
+    async = require('async'),
+    MongoClient = require('mongodb').MongoClient;
 
 
-var toCurrencies = ["USD", "EUR"];
+var toCurrencies = ["USD", "EUR", "GBP"];
 
 var fromCurrencies = ["BTC"];
 
-var dataBaseName = 'exchangeratesfromnpm';
 
 /**
  * Coynverter constructor for Coynverter package
  */
 function Coynverter (mongourl) {
-  this.mongo = mongourl;
+  this.mongourl = mongourl;
   this.toCurrencies = toCurrencies;
   this.fromCurrencies = fromCurrencies;
+  this.collectionName = 'exchangeratesfromnpm';
 }
 /**
  * convert convert a specified amount of BTC to a specified currency for one date
@@ -36,76 +32,42 @@ function Coynverter (mongourl) {
  */
 Coynverter.prototype.convert = function (date, currency,  amountToConvert, collectionToRead, callback) {
   "use strict";
-  mongoUtil.connectToServer(this.mongo, function ( err ) {
-    var db = mongoUtil.getDb();
-    var queryParams = {};
-    queryParams.date = new Date(date);
-    queryParams[currency] = {$exists: true};
-    db.collection(collectionToRead).findOne(queryParams, function (err, document) {
-      if(err){
-        return callback(err, null);
-      }
-      if(document){
-        var conversion = document[currency] * amountToConvert;
-        return callback(null, conversion);
-      }else{
-        var todayUpdate = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
-        _getExchangeRateForOneDate(todayUpdate, currency, collectionToRead, function (err, result) {
-          return callback(null, result[currency]*amountToConvert);
+  var self = this;
+};
+
+
+
+var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
+  return function (err, exchangeRates) {
+    var self = this;
+    if (err) {
+      console.log(err);
+      return;
+    }
+    MongoClient.connect(mongourl, function (err, db) {
+      if (err) {
+        console.log(err);
+      } else {
+        var collection = db.collection(collectionName);
+        async.each(exchangeRates, function (item, callback) {
+          collection.update({time: item.time}, item, {w:1, upsert:true}, function(err, docs) {
+            if (err) {
+              console.log(err);
+            } if (docs) {
+              console.log("Updated an entry.");
+              callback();
+            }
+            });
+          }, function (err) {
+          db.close();
+          callback(null, "Done");
         });
       }
     });
-  });
+  }
 };
-
-
-var feedExchangeRatesToMongo = function(err, exchangeRates, callback) {
-  mongoUtil.connectToServer(mongo, function ( err , result) {
-    if(err) {
-      return callback(err, null);
-    }
-    if(result) {
-      var db = mongoUtil.getDb();
-      exchangeRates.forEach(function (exchangeRateItem, key) {
-        var newMongoItem = {};
-        console.log(key);/*
-        newMongoItem.date =key;
-        db.collection(dataBaseName).findOne(queryParams, function (err, document) {
-          if(err){
-            return callback(err, null);
-          }
-          if(document){
-            var paramsToUpdate = {};
-            paramsToUpdate[currency] = exchangeRate[currency];
-            db.collection(collectionToWriteName).update({_id: document._id}, {$set: paramsToUpdate}, {w:1}, function (err, result) {
-              if(result){
-                return callback(null, result);
-              }
-              if(err){
-                return callback(err, null);
-              }
-            });
-          }
-          else{
-            db.collection(dataBaseName).insert(exchangeRate, {w:1}, function  (err, result) {
-              if(result){
-                return callback(null, result);
-              }
-              if(err){
-                return callback(err, null);
-              }
-            });
-          }
-        });
-        */
-      });
-    }
-  });
-};
-
 
 /**
->>>>>>> develop
  * getExchangeRatesForNewCurrency description
  * @param  {String}   currency              the currency to find the conversion rate
  * @param  {String}   collectionToWriteName collection where to check if the information is already available
@@ -113,105 +75,16 @@ var feedExchangeRatesToMongo = function(err, exchangeRates, callback) {
  * @param  {Function} callback              return two possible objects, error and result of the operation
  * @return {undefined}                      not return value
  */
-Coynverter.prototype.update = function () {
+Coynverter.prototype.update = function (callback) {
   "use strict";
-  var mongo = this.mongo;
+  var self = this;
   var timeToday = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
   //Currently Bitcoin is the only from currency
-
   var beginTime = '2010-07-17';
+  console.log(self.toCurrencies);
   var CoinDeskAPI = new coindeskapi();
-  CoinDeskAPI.getPricesForMultipleCurrencies(beginTime, timeToday, ['USD','EUR'], feedExchangeRatesToMongo);
-  /*
-      //Format information for storage new currency data in database
-      _.each(exchangeRatesCurrency, function (value, prop) {
-        var datesAndExchangeRates = {};
-        datesAndExchangeRates._id = uuid.v1();
-        datesAndExchangeRates[currency] = value;
-        datesAndExchangeRates.date = new Date(prop);
-        arrayValuesForDatabase.push(datesAndExchangeRates);
-      });
-      mongoUtil.connectToServer(mongo, function ( err ) {
-        var db = mongoUtil.getDb();
-        arrayValuesForDatabase.forEach(function (exchangeRate) {
-          var queryParams = {};
-          queryParams.date = exchangeRate.date;
-          db.collection(collectionToWriteName).findOne(queryParams, function (err, document) {
-            if(err){
-              return callback(err, null);
-            }
-            if(document){
-              var paramsToUpdate = {};
-              paramsToUpdate[currency] = exchangeRate[currency];
-              db.collection(collectionToWriteName).update({_id: document._id}, {$set: paramsToUpdate}, {w:1}, function (err, result) {
-                if(result){
-                  return callback(null, result);
-                }
-                if(err){
-                  return callback(err, null);
-                }
-              });
-            }
-            else{
-              db.collection(collectionToWriteName).insert(exchangeRate, {w:1}, function  (err, result) {
-                if(result){
-                  return callback(null, result);
-                }
-                if(err){
-                  return callback(err, null);
-                }
-              });
-            }
-          });
-        }
-      });
-    }
-  });
+  CoinDeskAPI.getPricesForMultipleCurrencies(beginTime, timeToday, self.toCurrencies, passExchangeRatesToMongo(self.mongourl, self.collectionName, callback));
 };
-
-/**
- * Coynverter constructor for Coynverter package
- */
-function Coynverter (mongourl, collection) {
-  this.collectionToQueryData = collection;
-  this.mongo = mongourl;
-}
-
-/**
- * update the information available on the database for a provided currency
- * @param  {String}   currency           the currency to find the conversion rate
- * @param  {Function} callback           return two possible objects, error and result of the operation
- * @return {undefined}                   not return value
- */
-Coynverter.prototype.update = function (currency, callback) {
-  "use strict";
-  var mongourl = this.mongo,
-      collectionToQueryData = this.collectionToQueryData;
-  try{
-    mongoUtil.connectToServer(mongourl, function ( err ) {
-      var db = mongoUtil.getDb();
-      db.collection(collectionToQueryData, function (error, collection) {
-        if(collection){
-          try {
-            _getExchangeRatesForCurrencies(currency, collectionToQueryData, mongourl, function (err, result) {
-              if(result){
-                return callback(null, result);
-              }
-            });
-          } catch (err) {
-            return callback(err, null);
-          }
-        }
-        if(error){
-          return callback(err, null);
-        }
-      });
-    });
-  }catch(err){
-    return callback(err, null);
-  }
-};
-
 /**
  * convert convert a specified amount of BTC to a specified currency for one date
  * @param  {String}   fromCurrency     the currency to find the conversion rate
@@ -222,33 +95,12 @@ Coynverter.prototype.update = function (currency, callback) {
  * @return {undefined}                 not return value
  */
 Coynverter.prototype.convert = function (fromCurrency, toCurrency, amountToConvert, date, callback) {
+  if (fromCurrency === toCurrency) {
+    return 1;
+  }
   "use strict";
   if (toCurrency === 'BTC') {
-    return callback("Sorry, at the moment we do not support conversion to Bitcoin", null);
-  }
-  var mongourl = this.mongo,
-      collectionToQueryData = this.collectionToQueryData;
-  try {
-    mongoUtil.connectToServer(mongourl, function (err) {
-      var db = mongoUtil.getDb();
-      var queryParams = {};
-      queryParams.date = new Date(date);
-      queryParams[toCurrency] = {$exists: true};
-      db.collection(collectionToQueryData).findOne(queryParams, function (err, document) {
-        if (err) {
-          return callback(err, null);
-        }
-        if (document) {
-          var conversion = document[toCurrency] * amountToConvert;
-          return callback(null, conversion);
-        } else {
-          var todayUpdate = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
-          _getExchangeRateForOneDate(todayUpdate, toCurrency, collectionToQueryData, function (err, result) {
-            return callback(null, result[toCurrency] * amountToConvert);
-          });
-        }
-      });
-    });
+    return callback(new Error("Sorry, at the moment we do not support conversion to Bitcoin"), null);
   }
 };
 
