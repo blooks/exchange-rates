@@ -7,6 +7,7 @@ var request = require('request'),
     //Development
     log = require('tracer').colorConsole(),
     uuid = require('node-uuid'),
+    coindeskapi = require('coindesk-api');
     mongoUtil = require('./mongoUtil');
 
 /**
@@ -61,7 +62,7 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
     }
     if(document){
       //log.info(document);
-      return callback(null, document);
+      callback(null, document);
     }else{
       queryParams.date = new Date(date);
       queryParams[currency] = {$exists: false};
@@ -88,7 +89,7 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
               log.error(err);
             }
           });
-          return callback(null, document);
+          callback(null, document);
         }else{
           _getOneDateNotInDatabase(date, currency, function (err, result) {
             if(result){
@@ -99,7 +100,7 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
               db.collection(collectionToWriteName).insert(exchangeRateForDate, {w:1}, function  (err, result) {
                 if(result){
                   log.info(result);
-                  return callback(null, result);
+                  callback(null, result);
                 }
                 if(err){
                   log.error(err);
@@ -116,11 +117,18 @@ var _getExchangeRateForOneDate = function (date, currency, collectionToWriteName
   });
 };
 
+
+var toCurrencies = ["USD", "EUR"];
+
+var fromCurrencies = ["BTC"];
+
 /**
  * Coynverter constructor for Coynverter package
  */
 function Coynverter (mongourl) {
   this.mongo = mongourl;
+  this.toCurrencies = toCurrencies;
+  this.fromCurrencies = fromCurrencies;
 }
 
 /**
@@ -130,7 +138,7 @@ function Coynverter (mongourl) {
  * @param  {Function} callback           return two possible objects, error and result of the operation
  * @return {undefined}                   not return value
  */
-Coynverter.prototype.update = function (collectionToUpdate, currency, callback) {
+Coynverter.prototype.update = function () {
   "use strict";
   mongoUtil.connectToServer(this.mongo, function ( err ) {
     var db = mongoUtil.getDb();
@@ -187,6 +195,10 @@ Coynverter.prototype.convert = function (date, currency,  amountToConvert, colle
   });
 };
 
+
+
+
+
 /**
  * getExchangeRatesForNewCurrency description
  * @param  {String}   currency              the currency to find the conversion rate
@@ -194,22 +206,17 @@ Coynverter.prototype.convert = function (date, currency,  amountToConvert, colle
  * @param  {Function} callback              return two possible objects, error and result of the operation
  * @return {undefined}                      not return value
  */
-Coynverter.prototype.getExchangeRatesForNewCurrency = function (currency, collectionToWriteName, callback) {
+Coynverter.prototype.update = function () {
   "use strict";
   var mongo = this.mongo;
-  var today = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
-  var url = 'https://api.coindesk.com/v1/bpi/historical/close.json?start=2010-07-17&end='+today+'&currency='+currency;
-  return request.get({uri: url}, function (err, response, body) {
-    if(err){
-      log.error(err);
-    }
-    if(response){
-      //log.info(response);
-    }
-    if(body){
-      var ratesValues = JSON.parse(body),
-          exchangeRatesCurrency = ratesValues.bpi,
-          arrayValuesForDatabase = [];
+  var timeToday = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
+  //Currently Bitcoin is the only from currency
+
+  var beginTime = '2010-07-17';
+  var CoinDeskAPI = new coindeskapi();
+
+  CoinDeskAPI.getAllPrices(beginTime, timeToday, putIntoMongo);
+  /*
       //Format information for storage new currency data in database
       _.each(exchangeRatesCurrency, function (value, prop) {
         var datesAndExchangeRates = {};
@@ -259,6 +266,7 @@ Coynverter.prototype.getExchangeRatesForNewCurrency = function (currency, collec
       });
     }
   });
+  */
 };
 
 module.exports = Coynverter;

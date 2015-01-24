@@ -4,12 +4,13 @@
   "description": "Convert currencies according to historical rates.",
   "main": "src/coynverter.js",
   "dependencies": {
+    "coindesk-api": "0.0.1",
     "moment": "2.7.0",
-    "request": "2.39.0",
-    "underscore": "1.6.0",
-    "tracer": "0.7.3",
     "mongodb": "1.4.6",
-    "node-uuid": "1.4.2"
+    "node-uuid": "1.4.2",
+    "request": "2.39.0",
+    "tracer": "0.7.3",
+    "underscore": "1.6.0"
   },
   "devDependencies": {},
   "scripts": {
