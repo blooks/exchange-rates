@@ -74,7 +74,11 @@ var getExchangeRate = function(mongourl, collectionName, fromCurrency, toCurrenc
         console.log('Did not get any items from Mongo.');
       }
       db.close();
-      callback(null, items[0].rates[toCurrency]);
+      if (items[0]) {
+        callback(null, items[0].rates[toCurrency]);
+      } else {
+        callback(null, 0);
+      }
     });
   });
 };
@@ -117,6 +121,9 @@ Coynverter.prototype.convert = function (fromCurrency, toCurrency, amountToConve
   var self = this;
   if (fromCurrency === toCurrency) {
     callback(null, 1);
+  }
+  if (date < new Date('2010-07-17')) {
+    callback(new Error('Coynverter: no data for that time!'));
   }
   if (_.indexOf(self.fromCurrencies, fromCurrency) < 0) {
     callback(new Error('Coynverter: Cannot convert from '+ fromCurrency+'!'));
