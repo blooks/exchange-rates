@@ -59,8 +59,8 @@ var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
 };
 
 var getExchangeRate = function(mongourl, collectionName, fromCurrency, toCurrency, date, callback) {
-  var fromDate = new Date(date.getTime() - (86400000 / 2));
-  var toDate = new Date(date.getTime() + (86400000 / 2));
+  var fromDate = new Date(date.getTime() - 86400000);
+  var toDate = new Date(date.getTime());
   MongoClient.connect(mongourl, function (err, db) {
     if (err) {
       callback(err, null);
