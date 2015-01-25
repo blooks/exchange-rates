@@ -66,7 +66,7 @@ var getExchangeRate = function(mongourl, collectionName, fromCurrency, toCurrenc
       callback(err, null);
     }
     var collection = db.collection(collectionName);
-    collection.find({time: {$gt: fromDate, $lt: toDate}}).toArray(function(err, items) {
+    collection.find({time: {$gt: fromDate, $lte: toDate}}).toArray(function(err, items) {
       if (err) {
         callback(err);
       }
