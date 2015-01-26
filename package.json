@@ -1,11 +1,11 @@
 {
   "name": "coyno-converter",
-  "version": "0.0.22",
+  "version": "0.0.24",
   "description": "Convert currencies according to historical rates.",
   "main": "src/coynverter.js",
   "dependencies": {
     "async": "^0.9.0",
-    "coindesk-api": "0.0.4",
+    "coindesk-api": "0.0.5",
     "moment": "2.7.0",
     "mongodb": "1.4.6",
     "node-uuid": "1.4.2",

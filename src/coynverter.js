@@ -91,7 +91,7 @@ var getExchangeRate = function(mongourl, collectionName, fromCurrency, toCurrenc
 Coynverter.prototype.update = function (callback) {
   "use strict";
   var self = this;
-  var timeToday = moment(new Date()).subtract(1, 'days').format("YYYY-MM-DD");
+  var timeToday = moment(new Date()).format("YYYY-MM-DD");
   //Currently Bitcoin is the only from currency
   var beginTime = '2010-07-17';
   var CoinDeskAPI = new coindeskapi();
