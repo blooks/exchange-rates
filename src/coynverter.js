@@ -26,11 +26,11 @@ function Coynverter (mongourl) {
 var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
   return function (err, exchangeRates) {
     if (err) {
-      callback(err, null);
+      return callback(err, null);
     }
     MongoClient.connect(mongourl, function (err, db) {
       if (err) {
-        callback(err, null);
+        return callback(err, null);
       } else {
         var collection = db.collection(collectionName);
         async.each(exchangeRates, function (item, callback) {
@@ -41,17 +41,17 @@ var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
           };
           collection.update({time: mongoItem.time}, mongoItem, {w:1, upsert:true}, function(err, docs) {
             if (err) {
-              callback(err);
+              return callback(err);
             } if (docs) {
-              callback();
+              return callback();
             }
             });
           }, function (err) {
           if (err) {
-            callback(err);
+            return callback(err);
           }
           db.close();
-          callback(null, "Done");
+          return callback(null, "Done");
         });
       }
     });
@@ -63,21 +63,21 @@ var getExchangeRate = function(mongourl, collectionName, fromCurrency, toCurrenc
   var toDate = new Date(date.getTime());
   MongoClient.connect(mongourl, function (err, db) {
     if (err) {
-      callback(err, null);
+      return callback(err, null);
     }
     var collection = db.collection(collectionName);
     collection.find({time: {$gt: fromDate, $lte: toDate}}).toArray(function(err, items) {
       if (err) {
-        callback(err);
+        return callback(err);
       }
       if (!items) {
         console.log('Did not get any items from Mongo.');
       }
       db.close();
       if (items[0]) {
-        callback(null, items[0].rates[toCurrency]);
+        return callback(null, items[0].rates[toCurrency]);
       } else {
-        callback(null, 0);
+        return callback(null, 0);
       }
     });
   });
@@ -101,7 +101,7 @@ Coynverter.prototype.update = function (callback) {
 var convert = function(amount, callback) {
   return function(err, result) {
     if (err) {
-      callback(err)
+      return callback(err)
     }
     callback(null, amount*result);
   }
@@ -120,16 +120,16 @@ Coynverter.prototype.convert = function (fromCurrency, toCurrency, amountToConve
   "use strict";
   var self = this;
   if (fromCurrency === toCurrency) {
-    callback(null, amountToConvert);
+    return callback(null, amountToConvert);
   }
   if (date < new Date('2010-07-17')) {
-    callback(new Error('Coynverter: no data for that time!'));
+    return callback(new Error('Coynverter: no data for that time!'));
   }
   if (_.indexOf(self.fromCurrencies, fromCurrency) < 0) {
-    callback(new Error('Coynverter: Cannot convert from '+ fromCurrency+'!'));
+    return callback(new Error('Coynverter: Cannot convert from '+ fromCurrency+'!'));
   }
   if (_.indexOf(self.toCurrencies, toCurrency) < 0) {
-    callback(new Error('Coynverter: Cannot convert to '+ toCurrency+'!'));
+    return callback(new Error('Coynverter: Cannot convert to '+ toCurrency+'!'));
   }
   getExchangeRate(self.mongourl, self.collectionName, fromCurrency, toCurrency, date, convert(amountToConvert, callback));
 };
