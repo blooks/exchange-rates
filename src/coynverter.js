@@ -59,25 +59,21 @@ var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
 };
 
 var getExchangeRate = function(mongourl, collectionName, fromCurrency, toCurrency, date, callback) {
-  var fromDate = new Date(date.getTime() - 86400000);
-  var toDate = new Date(date.getTime());
+  var dateTime = new Date(date.getTime());
   MongoClient.connect(mongourl, function (err, db) {
     if (err) {
       return callback(err, null);
     }
     var collection = db.collection(collectionName);
-    collection.find({time: {$gt: fromDate, $lte: toDate}}).toArray(function(err, items) {
+    collection.findOne({time: {$lte: dateTime}}, {sort: {time: -1}}, function(err, item) {
       if (err) {
         return callback(err);
       }
-      if (!items) {
-        console.log('Did not get any items from Mongo.');
-      }
       db.close();
-      if (items[0]) {
-        return callback(null, items[0].rates[toCurrency]);
+      if (item.rates) {
+        return callback(null, item.rates[toCurrency]);
       } else {
-        return callback(null, 0);
+        return callback(new Error('Coynverter found entry in Mongo without rates array.'));
       }
     });
   });
