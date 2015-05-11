@@ -33,25 +33,31 @@ var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
         return callback(err, null);
       } else {
         var collection = db.collection(collectionName);
-        async.each(exchangeRates, function (item, callback) {
-          var time = new Date(parseInt(item.time))  ;
-          var mongoItem = {
-            time: time,
-            rates: item.rates
-          };
-          collection.update({time: mongoItem.time}, mongoItem, {w:1, upsert:true}, function(err, docs) {
-            if (err) {
-              return callback(err);
-            } if (docs) {
-              return callback();
-            }
-            });
-          }, function (err) {
+        collection.ensureIndex({time: -1}, function(err, result) {
           if (err) {
             return callback(err);
+          } else {
+            async.each(exchangeRates, function (item, callback) {
+              var time = new Date(parseInt(item.time))  ;
+              var mongoItem = {
+                time: time,
+                rates: item.rates
+              };
+              collection.update({time: mongoItem.time}, mongoItem, {w:1, upsert:true}, function(err, docs) {
+                if (err) {
+                  return callback(err);
+                } if (docs) {
+                  return callback();
+                }
+              });
+              }, function (err) {
+              if (err) {
+                return callback(err);
+              }
+              db.close();
+              return callback(null, "Done");
+            });
           }
-          db.close();
-          return callback(null, "Done");
         });
       }
     });
