@@ -5,7 +5,7 @@
   "main": "src/coynverter.js",
   "dependencies": {
     "async": "^0.9.0",
-    "coindesk-api": "0.0.5",
+    "coindesk-api": "^0.1.0",
     "moment": "2.7.0",
     "mongodb": "1.4.6",
     "node-uuid": "1.4.2",
