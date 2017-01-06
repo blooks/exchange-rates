@@ -1,6 +1,6 @@
 {
   "name": "@blooks/exchange-rates",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Convert currencies according to historical rates.",
   "main": "src/coynverter.js",
   "dependencies": {
