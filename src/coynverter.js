@@ -1,89 +1,85 @@
-//15.01.2015 LFG Working under testing purposes//Now heavy development on this file, full of crap, many thinks to improve
-var moment = require('moment'),
-    _ = require('underscore'),
-    coindeskapi = require('coindesk-api'),
-    async = require('async'),
-    MongoClient = require('mongodb').MongoClient;
+// 15.01.2015 LFG Working under testing purposes//Now heavy development on this file, full of crap, many thinks to improve
+var moment = require('moment')
+const _ = require('underscore')
+const CoinDeskAPI = require('coindesk-api')
+const async = require('async')
+const MongoClient = require('mongodb').MongoClient
 
+var toCurrencies = ['USD', 'EUR', 'GBP']
 
-var toCurrencies = ["USD", "EUR", "GBP"];
-
-var fromCurrencies = ["BTC"];
-
+var fromCurrencies = ['BTC']
 
 /**
  * Coynverter constructor for Coynverter package
  */
 function Coynverter (mongourl) {
-  this.mongourl = mongourl;
-  this.toCurrencies = toCurrencies;
-  this.fromCurrencies = fromCurrencies;
-  this.collectionName = 'exchangeratesfromnpm';
+  this.mongourl = mongourl
+  this.toCurrencies = toCurrencies
+  this.fromCurrencies = fromCurrencies
+  this.collectionName = 'exchangeratesfromnpm'
 }
 
-
-
-var passExchangeRatesToMongo = function(mongourl, collectionName, callback) {
+var passExchangeRatesToMongo = function (mongourl, collectionName, callback) {
   return function (err, exchangeRates) {
     if (err) {
-      return callback(err, null);
+      return callback(err, null)
     }
     MongoClient.connect(mongourl, function (err, db) {
       if (err) {
-        return callback(err, null);
+        return callback(err, null)
       } else {
-        var collection = db.collection(collectionName);
-        collection.ensureIndex({time: -1}, function(err, result) {
+        var collection = db.collection(collectionName)
+        collection.ensureIndex({time: -1}, function (err, result) {
           if (err) {
-            return callback(err);
+            return callback(err)
           } else {
             async.each(exchangeRates, function (item, callback) {
-              var time = new Date(parseInt(item.time))  ;
+              var time = new Date(parseInt(item.time))
               var mongoItem = {
                 time: time,
                 rates: item.rates
-              };
-              collection.update({time: mongoItem.time}, mongoItem, {w:1, upsert:true}, function(err, docs) {
-                if (err) {
-                  return callback(err);
-                } if (docs) {
-                  return callback();
-                }
-              });
-              }, function (err) {
-              if (err) {
-                return callback(err);
               }
-              db.close();
-              return callback(null, "Done");
-            });
+              collection.update({time: mongoItem.time}, mongoItem, {w: 1, upsert: true}, function (err, docs) {
+                if (err) {
+                  return callback(err)
+                } if (docs) {
+                  return callback()
+                }
+              })
+            }, function (err) {
+              if (err) {
+                return callback(err)
+              }
+              db.close()
+              return callback(null, 'Done')
+            })
           }
-        });
+        })
       }
-    });
+    })
   }
-};
+}
 
-var getExchangeRate = function(mongourl, collectionName, fromCurrency, toCurrency, date, callback) {
-  var dateTime = new Date(date.getTime());
+var getExchangeRate = function (mongourl, collectionName, fromCurrency, toCurrency, date, callback) {
+  var dateTime = new Date(date.getTime())
   MongoClient.connect(mongourl, function (err, db) {
     if (err) {
-      return callback(err, null);
+      return callback(err, null)
     }
-    var collection = db.collection(collectionName);
-    collection.findOne({time: {$lte: dateTime}}, {sort: {time: -1}}, function(err, item) {
+    var collection = db.collection(collectionName)
+    collection.findOne({time: {$lte: dateTime}}, {sort: {time: -1}}, function (err, item) {
       if (err) {
-        return callback(err);
+        return callback(err)
       }
-      db.close();
+      db.close()
       if (item.rates) {
-        return callback(null, item.rates[toCurrency]);
+        return callback(null, item.rates[toCurrency])
       } else {
-        return callback(new Error('Coynverter found entry in Mongo without rates array.'));
+        return callback(new Error('Coynverter found entry in Mongo without rates array.'))
       }
-    });
-  });
-};
+    })
+  })
+}
 
 /**
  * getExchangeRatesForNewCurrency description
@@ -91,23 +87,23 @@ var getExchangeRate = function(mongourl, collectionName, fromCurrency, toCurrenc
  * @return {undefined}                      not return value
  */
 Coynverter.prototype.update = function (callback) {
-  "use strict";
-  var self = this;
-  var timeToday = moment(new Date()).format("YYYY-MM-DD");
-  //Currently Bitcoin is the only from currency
-  var beginTime = '2010-07-17';
-  var CoinDeskAPI = new coindeskapi();
-  CoinDeskAPI.getPricesForMultipleCurrencies(beginTime, timeToday, self.toCurrencies, passExchangeRatesToMongo(self.mongourl, self.collectionName, callback));
-};
+  'use strict'
+  var self = this
+  var timeToday = moment(new Date()).format('YYYY-MM-DD')
+  // Currently Bitcoin is the only from currency
+  var beginTime = '2010-07-17'
+  var coinDeskApi = new CoinDeskAPI()
+  coinDeskApi.getPricesForMultipleCurrencies(beginTime, timeToday, self.toCurrencies, passExchangeRatesToMongo(self.mongourl, self.collectionName, callback))
+}
 
-var convert = function(amount, callback) {
-  return function(err, result) {
+var convert = function (amount, callback) {
+  return function (err, result) {
     if (err) {
       return callback(err)
     }
-    callback(null, amount*result);
+    callback(null, amount * result)
   }
-};
+}
 /**
  *
  * convert convert a specified amount of BTC to a specified currency for one date
@@ -119,22 +115,21 @@ var convert = function(amount, callback) {
  * @return {undefined}                 not return value
  */
 Coynverter.prototype.convert = function (fromCurrency, toCurrency, amountToConvert, date, callback) {
-  "use strict";
-  var self = this;
+  'use strict'
+  var self = this
   if (fromCurrency === toCurrency) {
-    return callback(null, amountToConvert);
+    return callback(null, amountToConvert)
   }
   if (date < new Date('2010-07-17')) {
-    return callback(new Error('Coynverter: no data for that time!'));
+    return callback(new Error('Coynverter: no data for that time!'))
   }
   if (_.indexOf(self.fromCurrencies, fromCurrency) < 0) {
-    return callback(new Error('Coynverter: Cannot convert from '+ fromCurrency+'!'));
+    return callback(new Error('Coynverter: Cannot convert from ' + fromCurrency + '!'))
   }
   if (_.indexOf(self.toCurrencies, toCurrency) < 0) {
-    return callback(new Error('Coynverter: Cannot convert to '+ toCurrency+'!'));
+    return callback(new Error('Coynverter: Cannot convert to ' + toCurrency + '!'))
   }
-  getExchangeRate(self.mongourl, self.collectionName, fromCurrency, toCurrency, date, convert(amountToConvert, callback));
-};
+  getExchangeRate(self.mongourl, self.collectionName, fromCurrency, toCurrency, date, convert(amountToConvert, callback))
+}
 
-
-module.exports = Coynverter;
+module.exports = Coynverter

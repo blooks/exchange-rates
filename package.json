@@ -1,5 +1,5 @@
 {
-  "name": "coyno-converter",
+  "name": "@blooks/exchange-rates",
   "version": "0.1.0",
   "description": "Convert currencies according to historical rates.",
   "main": "src/coynverter.js",
@@ -14,13 +14,15 @@
     "underscore": "1.6.0",
     "wait.for": "^0.6.6"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "standard": "^8.6.0"
+  },
   "scripts": {
-    "test": "jasmine-node --autotest ./spec --color --verbose"
+    "test": "exit 0;"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/coyno/coyno-converter"
+    "url": "https://github.com/blooks/exchange-rates"
   },
   "keywords": [
     "script"
